@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
@@ -57,6 +58,9 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
+import net.zerodind.minecollapsesolarcore.api.CollapseSchedulingAccess;
+import net.zerodind.minecollapsesolarcore.api.CollapseSchedulingApi;
+import net.zerodind.minecollapsesolarcore.api.CollapseUpdateSource;
 import net.zerodind.minecollapsesolarcore.blocks.ExtendedProperties;
 import net.zerodind.minecollapsesolarcore.blocks.FluidProperty;
 import net.zerodind.minecollapsesolarcore.blocks.HorizontalSupportBlock;
@@ -76,6 +80,9 @@ import net.zerodind.minecollapsesolarcore.util.WorldTrackerCapability;
 @Mod(MineCollapseSolarCore.MODID)
 public class MineCollapseSolarCore
 {
+    private static final double PLAYER_CHAIN_RANGE = 10.0D;
+    private static final double PLAYER_CHAIN_RANGE_SQR = PLAYER_CHAIN_RANGE * PLAYER_CHAIN_RANGE;
+
     public static final String MODID = "minecollapsesolarcore";
     public static final Logger LOGGER = LogUtils.getLogger();
 
@@ -206,6 +213,27 @@ public class MineCollapseSolarCore
         forgeEventBus.addListener(this::onTagsUpdated);
         forgeEventBus.addListener(this::addReloadListeners);
 
+        CollapseSchedulingAccess.setApi(new CollapseSchedulingApi()
+        {
+            @Override
+            public void scheduleImmediateLandslide(Level level, BlockPos pos, CollapseUpdateSource source)
+            {
+                WorldTracker.get(level).scheduleImmediateLandslide(pos, source);
+            }
+
+            @Override
+            public void markLandslideRegionDirty(Level level, BlockPos pos, CollapseUpdateSource source)
+            {
+                WorldTracker.get(level).markLandslideRegionDirty(pos, source);
+            }
+
+            @Override
+            public void scheduleImmediateCollapseCheck(Level level, BlockPos pos, CollapseUpdateSource source)
+            {
+                WorldTracker.get(level).scheduleImmediateCollapseCheck(pos, source);
+            }
+        });
+
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC);
     }
 
@@ -220,6 +248,12 @@ public class MineCollapseSolarCore
         final LevelAccessor levelAccess = event.getLevel();
         final BlockPos pos = event.getPos();
         final BlockState state = levelAccess.getBlockState(pos);
+
+        if (levelAccess instanceof Level level)
+        {
+            scheduleImmediateLandslideNeighbors(level, pos);
+            scheduleDirectLandslideRetryNeighbors(level, pos, event.getPlayer());
+        }
 
         if (Helpers.isBlock(state, TAG_CAN_TRIGGER_COLLAPSE) && levelAccess instanceof Level level)
         {
@@ -237,7 +271,19 @@ public class MineCollapseSolarCore
 
             if (Helpers.isBlock(state, TAG_CAN_LANDSLIDE))
             {
-                WorldTracker.get(world).addLandslidePos(pos);
+                CollapseUpdateSource source = CollapseUpdateSource.fromName(CollapseSchedulingAccess.getActiveSourceName());
+                if (source == CollapseUpdateSource.FALLING_BLOCK_SETTLE)
+                {
+                    return;
+                }
+                else if (source.isSolarDriven())
+                {
+                    WorldTracker.get(world).markLandslideRegionDirty(pos, source);
+                }
+                else
+                {
+                    WorldTracker.get(world).scheduleImmediateLandslide(pos, CollapseUpdateSource.PLAYER_ACTION);
+                }
             }
         }
     }
@@ -254,7 +300,19 @@ public class MineCollapseSolarCore
 
                 if (Helpers.isBlock(state, TAG_CAN_LANDSLIDE))
                 {
-                    WorldTracker.get(level).addLandslidePos(pos);
+                    CollapseUpdateSource source = CollapseUpdateSource.fromName(CollapseSchedulingAccess.getActiveSourceName());
+                    if (source == CollapseUpdateSource.FALLING_BLOCK_SETTLE)
+                    {
+                        WorldTracker.get(level).markLandslideRegionDirty(pos, source);
+                    }
+                    else if (source.isSolarDriven())
+                    {
+                        WorldTracker.get(level).markLandslideRegionDirty(pos, source);
+                    }
+                    else
+                    {
+                        WorldTracker.get(level).scheduleImmediateLandslide(pos, CollapseUpdateSource.NEIGHBOR_UPDATE);
+                    }
                 }
             }
         }
@@ -275,6 +333,62 @@ public class MineCollapseSolarCore
         {
             WorldTracker.get(level).tick();
         }
+    }
+
+    private void scheduleImmediateLandslideNeighbors(Level level, BlockPos origin)
+    {
+        for (Direction direction : Direction.values())
+        {
+            BlockPos candidatePos = origin.relative(direction);
+            BlockState candidateState = level.getBlockState(candidatePos);
+            if (Helpers.isBlock(candidateState, TAG_CAN_LANDSLIDE))
+            {
+                WorldTracker.get(level).scheduleImmediateLandslide(candidatePos, CollapseUpdateSource.PLAYER_ACTION);
+            }
+        }
+    }
+
+    private void scheduleDirectLandslideRetryNeighbors(Level level, BlockPos origin, Player player)
+    {
+        for (Direction direction : Direction.values())
+        {
+            BlockPos candidatePos = origin.relative(direction);
+            BlockState candidateState = level.getBlockState(candidatePos);
+            if (!Helpers.isBlock(candidateState, TAG_CAN_LANDSLIDE))
+            {
+                continue;
+            }
+
+            WorldTracker.get(level).scheduleDirectLandslideRetry(candidatePos, CollapseUpdateSource.PLAYER_ACTION);
+            schedulePlayerColumnRetries(level, candidatePos, player);
+        }
+    }
+
+    private void schedulePlayerColumnRetries(Level level, BlockPos startPos, Player player)
+    {
+        if (player == null) {
+            return;
+        }
+
+        BlockPos currentPos = startPos.above();
+        while (isWithinPlayerChainRange(player, currentPos))
+        {
+            BlockState currentState = level.getBlockState(currentPos);
+            if (!Helpers.isBlock(currentState, TAG_CAN_LANDSLIDE))
+            {
+                break;
+            }
+            WorldTracker.get(level).scheduleDirectLandslideRetry(currentPos, CollapseUpdateSource.PLAYER_ACTION);
+            currentPos = currentPos.above();
+        }
+    }
+
+    private static boolean isWithinPlayerChainRange(Player player, BlockPos pos)
+    {
+        double dx = player.getX() - (pos.getX() + 0.5D);
+        double dy = player.getY() - (pos.getY() + 0.5D);
+        double dz = player.getZ() - (pos.getZ() + 0.5D);
+        return dx * dx + dy * dy + dz * dz <= PLAYER_CHAIN_RANGE_SQR;
     }
 
     private void onDataPackSync(OnDatapackSyncEvent event)

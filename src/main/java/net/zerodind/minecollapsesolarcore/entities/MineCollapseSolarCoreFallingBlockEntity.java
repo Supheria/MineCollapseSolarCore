@@ -22,6 +22,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.zerodind.minecollapsesolarcore.MineCollapseSolarCore;
+import net.zerodind.minecollapsesolarcore.api.CollapseSchedulingAccess;
+import net.zerodind.minecollapsesolarcore.api.CollapseUpdateSource;
 import net.zerodind.minecollapsesolarcore.util.FluidHelpers;
 import net.zerodind.minecollapsesolarcore.util.Helpers;
 import net.zerodind.minecollapsesolarcore.util.WorldTracker;
@@ -103,6 +105,7 @@ public class MineCollapseSolarCoreFallingBlockEntity extends FallingBlockEntity
 
     private final boolean dontSetBlock;
     private boolean failedBreakCheck;
+    private boolean expectBlockPresentOnFirstTick;
 
     public MineCollapseSolarCoreFallingBlockEntity(EntityType<? extends FallingBlockEntity> entityType, Level level)
     {
@@ -110,6 +113,7 @@ public class MineCollapseSolarCoreFallingBlockEntity extends FallingBlockEntity
 
         failedBreakCheck = false;
         dontSetBlock = false;
+        expectBlockPresentOnFirstTick = true;
     }
 
     public MineCollapseSolarCoreFallingBlockEntity(Level level, double x, double y, double z, BlockState fallingBlockState, float damagePerBlockFallen, int maximumFallDamage)
@@ -161,6 +165,12 @@ public class MineCollapseSolarCoreFallingBlockEntity extends FallingBlockEntity
         }
     }
 
+    public MineCollapseSolarCoreFallingBlockEntity setExpectBlockPresentOnFirstTick(boolean expectBlockPresentOnFirstTick)
+    {
+        this.expectBlockPresentOnFirstTick = expectBlockPresentOnFirstTick;
+        return this;
+    }
+
     @Override
     public void tick()
     {
@@ -174,15 +184,18 @@ public class MineCollapseSolarCoreFallingBlockEntity extends FallingBlockEntity
             final Block block = fallingBlockState.getBlock();
             if (time++ == 0)
             {
-                // First tick, replace the existing block
-                BlockPos blockpos = blockPosition();
-                if (block == level().getBlockState(blockpos).getBlock())
+                if (expectBlockPresentOnFirstTick)
                 {
-                    level().removeBlock(blockpos, false);
-                }
-                else if (!level().isClientSide)
-                {
-                    remove(RemovalReason.DISCARDED);
+                    // First tick, replace the existing block
+                    BlockPos blockpos = blockPosition();
+                    if (block == level().getBlockState(blockpos).getBlock())
+                    {
+                        level().removeBlock(blockpos, false);
+                    }
+                    else if (!level().isClientSide)
+                    {
+                        remove(RemovalReason.DISCARDED);
+                    }
                 }
                 // If we spawn two falling block entities on the same tick, in adjacent positions, and the one above ticks first, it can cause a situation where the block below gets deleted by the falling block destruction code.
                 // This causes the next block entity to disappear. So, we don't do anything on first tick except capture and replace the block.
@@ -277,7 +290,18 @@ public class MineCollapseSolarCoreFallingBlockEntity extends FallingBlockEntity
 
     private void placeAsBlockOrDropAsItem(BlockState hitBlockState, BlockPos posAt, BlockState fallingBlockState)
     {
-        if (level().setBlockAndUpdate(posAt, fallingBlockState))
+        boolean placed;
+        CollapseSchedulingAccess.pushActiveSource(CollapseUpdateSource.FALLING_BLOCK_SETTLE.name());
+        try
+        {
+            placed = level().setBlockAndUpdate(posAt, fallingBlockState);
+        }
+        finally
+        {
+            CollapseSchedulingAccess.popActiveSource();
+        }
+
+        if (placed)
         {
             afterPlacementAsBlock(hitBlockState, posAt, fallingBlockState);
         }
@@ -296,7 +320,9 @@ public class MineCollapseSolarCoreFallingBlockEntity extends FallingBlockEntity
 
         if (Helpers.isBlock(fallingBlockState.getBlock(), MineCollapseSolarCore.TAG_CAN_LANDSLIDE))
         {
-            WorldTracker.get(level()).addLandslidePos(posAt);
+            // Re-scan the settled area without immediately re-launching the same block,
+            // which otherwise creates visible repeated "ghost" falls after player mining.
+            WorldTracker.get(level()).markLandslideRegionDirty(posAt, CollapseUpdateSource.FALLING_BLOCK_SETTLE);
         }
 
         // Sets the tile entity if it exists

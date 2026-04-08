@@ -2,11 +2,8 @@ package net.zerodind.minecollapsesolarcore.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -23,17 +20,12 @@ import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import net.zerodind.minecollapsesolarcore.Config;
 import net.zerodind.minecollapsesolarcore.MineCollapseSolarCore;
+import net.zerodind.minecollapsesolarcore.api.CollapseUpdateSource;
 import net.zerodind.minecollapsesolarcore.entities.MineCollapseSolarCoreFallingBlockEntity;
 import net.zerodind.minecollapsesolarcore.recipes.CollapseRecipe;
-import net.zerodind.minecollapsesolarcore.recipes.LandslideRecipe;
 
 public class WorldTracker implements ICapabilitySerializable<CompoundTag>
 {
-    private static final int MAX_COLLAPSE_POSITIONS_PER_TICK = 96;
-    private static final int MAX_LANDSLIDES_PER_TICK = 64;
-    private static final int MAX_QUEUED_LANDSLIDES = 512;
-    private static final long LANDSLIDE_REQUEUE_COOLDOWN_TICKS = 4;
-
     /**
      * Returns the world tracker for a given world. Every <strong>real</strong> world must have a world tracker attached, i.e.
      * worlds created by vanilla. Mods may do weird things (see <a href="https://github.com/TerraFirmaCraft/TerraFirmaCraft/issues/2842">
@@ -51,41 +43,44 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
     private final Random random;
     private final LazyOptional<WorldTracker> capability;
 
-    private final BufferedList<TickEntry> landslideTicks;
-    private final Set<BlockPos> queuedLandslidePositions;
-    private final Map<BlockPos, Long> lastQueuedLandslideTick;
+    private final LandslideScheduler landslideScheduler;
     private final List<Collapse> collapsesInProgress;
-    private long tickCounter;
 
     public WorldTracker(Level level)
     {
         this.level = level;
         this.random = new Random();
         this.capability = LazyOptional.of(() -> this);
-        this.landslideTicks = new BufferedList<>();
-        this.queuedLandslidePositions = new HashSet<>();
-        this.lastQueuedLandslideTick = new HashMap<>();
+        this.landslideScheduler = new LandslideScheduler(level);
         this.collapsesInProgress = new ArrayList<>();
-        this.tickCounter = 0;
     }
 
     public void addLandslidePos(BlockPos pos)
     {
-        final BlockPos immutablePos = pos.immutable();
-        if (queuedLandslidePositions.contains(immutablePos) || queuedLandslidePositions.size() >= MAX_QUEUED_LANDSLIDES)
-        {
-            return;
-        }
+        scheduleImmediateLandslide(pos, CollapseUpdateSource.NEIGHBOR_UPDATE);
+    }
 
-        final Long lastQueuedTick = lastQueuedLandslideTick.get(immutablePos);
-        if (lastQueuedTick != null && tickCounter - lastQueuedTick < LANDSLIDE_REQUEUE_COOLDOWN_TICKS)
-        {
-            return;
-        }
+    public void scheduleImmediateLandslide(BlockPos pos, CollapseUpdateSource source)
+    {
+        landslideScheduler.scheduleImmediate(pos, source);
+    }
 
-        queuedLandslidePositions.add(immutablePos);
-        lastQueuedLandslideTick.put(immutablePos, tickCounter);
-        landslideTicks.add(new TickEntry(immutablePos, 2));
+    public void markLandslideRegionDirty(BlockPos pos, CollapseUpdateSource source)
+    {
+        landslideScheduler.markDirty(pos, source);
+    }
+
+    public void scheduleDirectLandslideRetry(BlockPos pos, CollapseUpdateSource source)
+    {
+        landslideScheduler.scheduleDirectRetry(pos, source);
+    }
+
+    public void scheduleImmediateCollapseCheck(BlockPos pos, CollapseUpdateSource source)
+    {
+        if (level != null && CollapseRecipe.canStartCollapse(level, pos))
+        {
+            CollapseRecipe.startCollapse(level, pos);
+        }
     }
 
     public void addCollapseData(Collapse collapse)
@@ -117,9 +112,7 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
      */
     public void tick()
     {
-        tickCounter++;
-
-        int remainingCollapseBudget = MAX_COLLAPSE_POSITIONS_PER_TICK;
+        int remainingCollapseBudget = CollapseBudgetProfile.collapseBudget(level);
         if (!collapsesInProgress.isEmpty() && random.nextInt(10) == 0)
         {
             for (Collapse collapse : collapsesInProgress)
@@ -165,47 +158,14 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
             collapsesInProgress.removeIf(collapse -> collapse.nextPositions.isEmpty());
         }
 
-        landslideTicks.flush();
-        Iterator<TickEntry> tickIterator = landslideTicks.listIterator();
-        int processedLandslides = 0;
-        while (tickIterator.hasNext())
-        {
-            if (processedLandslides >= MAX_LANDSLIDES_PER_TICK)
-            {
-                break;
-            }
-
-            TickEntry entry = tickIterator.next();
-            if (entry.tick())
-            {
-                final BlockState currentState = level.getBlockState(entry.getPos());
-                LandslideRecipe.tryLandslide(level, entry.getPos(), currentState);
-                queuedLandslidePositions.remove(entry.getPos());
-                tickIterator.remove();
-                processedLandslides++;
-            }
-        }
-
-        if (!lastQueuedLandslideTick.isEmpty())
-        {
-            final long cleanupBeforeTick = tickCounter - LANDSLIDE_REQUEUE_COOLDOWN_TICKS;
-            lastQueuedLandslideTick.entrySet().removeIf(entry -> !queuedLandslidePositions.contains(entry.getKey()) && entry.getValue() <= cleanupBeforeTick);
-        }
+        landslideScheduler.tick();
     }
 
     @Override
     public CompoundTag serializeNBT()
     {
-        landslideTicks.flush();
-
         CompoundTag nbt = new CompoundTag();
-        ListTag landslideNbt = new ListTag();
-        for (TickEntry entry : landslideTicks)
-        {
-            landslideNbt.add(entry.serializeNBT());
-        }
-        nbt.put("landslideTicks", landslideNbt);
-
+        nbt.put("landslideScheduler", landslideScheduler.serializeNBT());
         ListTag collapseNbt = new ListTag();
         for (Collapse collapse : collapsesInProgress)
         {
@@ -221,26 +181,8 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
     {
         if (nbt != null)
         {
-            landslideTicks.clear();
-            queuedLandslidePositions.clear();
-            lastQueuedLandslideTick.clear();
+            landslideScheduler.deserializeNBT(nbt.getCompound("landslideScheduler"));
             collapsesInProgress.clear();
-            tickCounter = 0;
-
-            ListTag landslideNbt = nbt.getList("landslideTicks", Tag.TAG_COMPOUND);
-            for (int i = 0; i < landslideNbt.size(); i++)
-            {
-                TickEntry tickEntry = new TickEntry(landslideNbt.getCompound(i));
-                BlockPos pos = tickEntry.getPos().immutable();
-                if (queuedLandslidePositions.size() >= MAX_QUEUED_LANDSLIDES || queuedLandslidePositions.contains(pos))
-                {
-                    continue;
-                }
-
-                queuedLandslidePositions.add(pos);
-                lastQueuedLandslideTick.put(pos, tickCounter);
-                landslideTicks.add(new TickEntry(pos, tickEntry.getTicks()));
-            }
 
             ListTag collapseNbt = nbt.getList("collapsesInProgress", Tag.TAG_COMPOUND);
             for (int i = 0; i < collapseNbt.size(); i++)
@@ -268,6 +210,10 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
         }
 
         @Override public void addLandslidePos(BlockPos pos) {}
+        @Override public void scheduleImmediateLandslide(BlockPos pos, CollapseUpdateSource source) {}
+        @Override public void markLandslideRegionDirty(BlockPos pos, CollapseUpdateSource source) {}
+        @Override public void scheduleDirectLandslideRetry(BlockPos pos, CollapseUpdateSource source) {}
+        @Override public void scheduleImmediateCollapseCheck(BlockPos pos, CollapseUpdateSource source) {}
         @Override public void addCollapseData(Collapse collapse) {}
         @Override public void addCollapsePositions(BlockPos centerPos, Collection<BlockPos> positions) {}
     }

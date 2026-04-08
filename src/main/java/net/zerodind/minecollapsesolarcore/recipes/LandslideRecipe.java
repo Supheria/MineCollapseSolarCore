@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.BlockGetter;
@@ -15,11 +16,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.zerodind.minecollapsesolarcore.Config;
 import net.zerodind.minecollapsesolarcore.MineCollapseSolarCore;
+import net.zerodind.minecollapsesolarcore.api.CollapseUpdateSource;
 import net.zerodind.minecollapsesolarcore.entities.MineCollapseSolarCoreFallingBlockEntity;
 import net.zerodind.minecollapsesolarcore.util.FluidHelpers;
 import net.zerodind.minecollapsesolarcore.util.Helpers;
 import net.zerodind.minecollapsesolarcore.util.IndirectHashCollection;
 import net.zerodind.minecollapsesolarcore.util.Support;
+import net.zerodind.minecollapsesolarcore.util.WorldTracker;
 
 /**
  * This handles all logic for land slides (sideways gravity affected blocks)
@@ -29,6 +32,9 @@ import net.zerodind.minecollapsesolarcore.util.Support;
  */
 public class LandslideRecipe extends SimpleBlockRecipe
 {
+    private static final double PLAYER_CHAIN_RANGE = 24.0D;
+    private static final double PLAYER_CHAIN_RANGE_SQR = PLAYER_CHAIN_RANGE * PLAYER_CHAIN_RANGE;
+
     public static final IndirectHashCollection<Block, LandslideRecipe> CACHE = IndirectHashCollection.createForRecipe(recipe -> recipe.getBlockIngredient().blocks(), MineCollapseSolarCore.RECIPE_TYPE_LANDSLIDE);
 
     public static LandslideRecipe getRecipe(BlockState state)
@@ -50,7 +56,7 @@ public class LandslideRecipe extends SimpleBlockRecipe
      * @return true if a landslide actually occurred
      */
     @SuppressWarnings("UnusedReturnValue")
-    public static boolean tryLandslide(Level level, BlockPos pos, BlockState state)
+    public static boolean tryLandslide(Level level, BlockPos pos, BlockState state, CollapseUpdateSource source)
     {
         if (!level.isClientSide() && Config.ENABLE_BLOCK_LANDSLIDES.get())
         {
@@ -61,17 +67,20 @@ public class LandslideRecipe extends SimpleBlockRecipe
                 if (recipe != null)
                 {
                     final BlockState fallingState = recipe.getBlockCraftingResult(state);
+                    level.removeBlock(pos, false);
                     if (!fallPos.equals(pos))
                     {
-                        level.removeBlock(pos, false); // Remove the original position, which would be the falling block
                         if (!FluidHelpers.isAirOrEmptyFluid(level.getBlockState(fallPos)))
                         {
                             level.destroyBlock(fallPos, true); // Destroy the block that currently occupies the pos we are going to move sideways into
                         }
                     }
-                    level.setBlock(fallPos, fallingState, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                     level.playSound(null, pos, MineCollapseSolarCore.SOUND_DIRT_SLIDE_SHORT.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
-                    level.addFreshEntity(new MineCollapseSolarCoreFallingBlockEntity(level, fallPos.getX() + 0.5, fallPos.getY(), fallPos.getZ() + 0.5, fallingState, 0.8f, 10));
+                    level.addFreshEntity(new MineCollapseSolarCoreFallingBlockEntity(level, fallPos.getX() + 0.5, fallPos.getY(), fallPos.getZ() + 0.5, fallingState, 0.8f, 10)
+                            .setExpectBlockPresentOnFirstTick(false));
+                    if (source == CollapseUpdateSource.PLAYER_ACTION && isWithinPlayerChainRange(level, pos)) {
+                        WorldTracker.get(level).scheduleDirectLandslideRetry(pos.above(), source);
+                    }
                 }
                 return true;
             }
@@ -133,6 +142,23 @@ public class LandslideRecipe extends SimpleBlockRecipe
         BlockPos sidePos = pos.relative(side);
         BlockState sideState = world.getBlockState(sidePos);
         return sideState.isFaceSturdy(world, sidePos, side.getOpposite()) || Helpers.isBlock(sideState, MineCollapseSolarCore.TAG_SUPPORTS_LANDSLIDE);
+    }
+
+    private static boolean isWithinPlayerChainRange(Level level, BlockPos pos)
+    {
+        double centerX = pos.getX() + 0.5D;
+        double centerZ = pos.getZ() + 0.5D;
+        for (Player player : level.players())
+        {
+            double dx = player.getX() - centerX;
+            double dy = player.getY() - (pos.getY() + 0.5D);
+            double dz = player.getZ() - centerZ;
+            if (dx * dx + dy * dy + dz * dz <= PLAYER_CHAIN_RANGE_SQR)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public LandslideRecipe(ResourceLocation id, BlockIngredient ingredient, BlockState outputState, boolean copyInputState)

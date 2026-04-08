@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/MineCollapseSolarCore\" status --short)",
+      "Bash(printf \"\\\\n---DIFF---\\\\n\")",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/MineCollapseSolarCore\" diff --stat)",
+      "Bash(printf \"\\\\n---LOG---\\\\n\")",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/MineCollapseSolarCore\" log --oneline -5)",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/SolarApocalypseCore\" status --short)",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/SolarApocalypseCore\" diff --stat)",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/SolarApocalypseCore\" log --oneline -5)",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/MineCollapseSolarCore\" diff --cached --stat)",
+      "Bash(printf \"\\\\n---CACHED NAMES---\\\\n\")",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/MineCollapseSolarCore\" diff --cached --name-status)",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/SolarApocalypseCore\" diff --cached --stat)",
+      "Bash(git -C \"/c/Users/supheria/Documents/Projects/SolarApocalypseCore\" diff --cached --name-status)",
+      "Bash(git:*)"
+    ]
+  }
+}
