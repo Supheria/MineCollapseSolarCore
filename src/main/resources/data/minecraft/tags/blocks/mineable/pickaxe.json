@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "minecollapse:hardened_stone",
+    "minecollapse:hardened_granite",
+    "minecollapse:hardened_diorite",
+    "minecollapse:hardened_andesite",
+    "minecollapse:hardened_tuff",
+    "minecollapse:hardened_deepslate"
+  ]
+}

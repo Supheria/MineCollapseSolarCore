@@ -1,0 +1,93 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "geolosys:deepslate_bauxite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_lignite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_bituminous_coal_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_anthracite_coal_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_coal_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_malachite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_azurite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_kimberlite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_beryl_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_teallite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_gold_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_hematite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_limonite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_lapis_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_galena_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_platinum_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_quartz_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_cinnabar_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_cassiterite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_teallite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_autunite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:deepslate_sphalerite_ore",
+      "required": false
+    }
+  ]
+}

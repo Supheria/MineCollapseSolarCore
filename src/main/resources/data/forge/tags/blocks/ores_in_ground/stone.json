@@ -1,0 +1,93 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "geolosys:bauxite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:lignite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:bituminous_coal_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:anthracite_coal_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:coal_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:malachite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:azurite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:kimberlite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:beryl_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:teallite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:gold_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:hematite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:limonite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:lapis_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:galena_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:platinum_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:quartz_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:cinnabar_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:cassiterite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:teallite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:autunite_ore",
+      "required": false
+    },
+    {
+      "id": "geolosys:sphalerite_ore",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:stone",
+    "minecraft:andesite",
+    "minecraft:granite",
+    "minecraft:diorite",
+    "minecraft:calcite",
+    "minecraft:smooth_basalt",
+    "minecraft:dripstone_block",
+    "minecraft:tuff",
+    "minecraft:deepslate",
+    "#forge:ores_in_ground/stone",
+    "#forge:ores_in_ground/deepslate"
+  ]
+}
