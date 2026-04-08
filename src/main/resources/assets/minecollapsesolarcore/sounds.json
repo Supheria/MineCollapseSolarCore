@@ -1,0 +1,32 @@
+{
+  "random.dirt_slide_short": {
+    "subtitle": "subtitles.generic.minecollapsesolarcore.dirt_slide",
+    "sounds": [
+      "minecollapsesolarcore:random/dirt_slide_short_1",
+      "minecollapsesolarcore:random/dirt_slide_short_2"
+    ]
+  },
+  "random.rock_slide_long": {
+    "subtitle": "subtitles.generic.minecollapsesolarcore.rock_slide_long",
+    "sounds": [
+      "minecollapsesolarcore:random/rock_slide_long_1",
+      "minecollapsesolarcore:random/rock_slide_long_2",
+      "minecollapsesolarcore:random/rock_slide_long_3",
+      "minecollapsesolarcore:random/rock_slide_long_4"
+    ]
+  },
+  "random.rock_slide_long_fake": {
+    "subtitle": "subtitles.generic.minecollapsesolarcore.rock_slide_long_fake",
+    "sounds": [
+      "minecollapsesolarcore:random/rock_slide_long_fake_1",
+      "minecollapsesolarcore:random/rock_slide_long_fake_2"
+    ]
+  },
+  "random.rock_slide_short": {
+    "subtitle": "subtitles.generic.minecollapsesolarcore.rock_slide_short",
+    "sounds": [
+      "minecollapsesolarcore:random/rock_slide_short_1",
+      "minecollapsesolarcore:random/rock_slide_short_2"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "replace": false,
+  "values": [
+    "minecollapsesolarcore:hardened_stone",
+    "minecollapsesolarcore:hardened_granite",
+    "minecollapsesolarcore:hardened_diorite",
+    "minecollapsesolarcore:hardened_andesite",
+    "minecollapsesolarcore:hardened_tuff",
+    "minecollapsesolarcore:hardened_deepslate",
+    "minecraft:stone",
+    "minecraft:andesite",
+    "minecraft:granite",
+    "minecraft:diorite",
+    "minecraft:calcite",
+    "minecraft:smooth_basalt",
+    "minecraft:amethyst_block",
+    "minecraft:dripstone_block",
+    "minecraft:tuff",
+    "minecraft:deepslate",
+    "#forge:ores_in_ground/stone",
+    "#forge:ores_in_ground/deepslate"
+  ]
+}

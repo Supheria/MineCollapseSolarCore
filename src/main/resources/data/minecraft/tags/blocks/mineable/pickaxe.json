@@ -1,11 +1,11 @@
 {
   "replace": false,
   "values": [
-    "minecollapse:hardened_stone",
-    "minecollapse:hardened_granite",
-    "minecollapse:hardened_diorite",
-    "minecollapse:hardened_andesite",
-    "minecollapse:hardened_tuff",
-    "minecollapse:hardened_deepslate"
+    "minecollapsesolarcore:hardened_stone",
+    "minecollapsesolarcore:hardened_granite",
+    "minecollapsesolarcore:hardened_diorite",
+    "minecollapsesolarcore:hardened_andesite",
+    "minecollapsesolarcore:hardened_tuff",
+    "minecollapsesolarcore:hardened_deepslate"
   ]
 }

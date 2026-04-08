@@ -1,0 +1,10 @@
+{
+  "type": "minecollapsesolarcore:collapse",
+  "ingredient": [
+    "minecraft:deepslate",
+    {
+      "tag": "forge:ores_in_ground/deepslate"
+    }
+  ],
+  "result": "minecraft:cobbled_deepslate"
+}

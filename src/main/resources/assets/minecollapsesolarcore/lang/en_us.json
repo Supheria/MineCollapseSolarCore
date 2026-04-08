@@ -1,0 +1,23 @@
+{
+  "subtitles.generic.minecollapsesolarcore.dirt_slide": "Soil landslides",
+  "subtitles.generic.minecollapsesolarcore.rock_slide_long": "Rock collapses",
+  "subtitles.generic.minecollapsesolarcore.rock_slide_long_fake": "Rock creaks",
+  "subtitles.generic.minecollapsesolarcore.rock_slide_short": "Rock crumbles",
+  "itemGroup.minecollapsesolarcore": "Mine Collapse Solar Core",
+  "block.minecollapsesolarcore.hardened_stone": "Hardened Stone",
+  "item.minecollapsesolarcore.hardened_stone": "Hardened Stone",
+  "block.minecollapsesolarcore.hardened_granite": "Hardened Granite",
+  "item.minecollapsesolarcore.hardened_granite": "Hardened Granite",
+  "block.minecollapsesolarcore.hardened_diorite": "Hardened Diorite",
+  "item.minecollapsesolarcore.hardened_diorite": "Hardened Diorite",
+  "block.minecollapsesolarcore.hardened_andesite": "Hardened Andesite",
+  "item.minecollapsesolarcore.hardened_andesite": "Hardened Andesite",
+  "block.minecollapsesolarcore.hardened_tuff": "Hardened Tuff",
+  "item.minecollapsesolarcore.hardened_tuff": "Hardened Tuff",
+  "block.minecollapsesolarcore.hardened_deepslate": "Hardened Deepslate",
+  "item.minecollapsesolarcore.hardened_deepslate": "Hardened Deepslate",
+  "block.minecollapsesolarcore.vertical_support": "Support",
+  "block.minecollapsesolarcore.horizontal_support": "Support",
+  "item.minecollapsesolarcore.support": "Support",
+  "entity.minecollapsesolarcore.falling_block": "Falling Block"
+}
