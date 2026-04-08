@@ -30,6 +30,11 @@ public class TickEntry
         return this.ticks == 0;
     }
 
+    public int getTicks()
+    {
+        return ticks;
+    }
+
     public CompoundTag serializeNBT()
     {
         CompoundTag nbt = new CompoundTag();

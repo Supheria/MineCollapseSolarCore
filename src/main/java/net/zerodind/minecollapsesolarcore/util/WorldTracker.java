@@ -2,9 +2,11 @@ package net.zerodind.minecollapsesolarcore.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -29,6 +31,8 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
 {
     private static final int MAX_COLLAPSE_POSITIONS_PER_TICK = 96;
     private static final int MAX_LANDSLIDES_PER_TICK = 64;
+    private static final int MAX_QUEUED_LANDSLIDES = 512;
+    private static final long LANDSLIDE_REQUEUE_COOLDOWN_TICKS = 4;
 
     /**
      * Returns the world tracker for a given world. Every <strong>real</strong> world must have a world tracker attached, i.e.
@@ -48,7 +52,10 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
     private final LazyOptional<WorldTracker> capability;
 
     private final BufferedList<TickEntry> landslideTicks;
+    private final Set<BlockPos> queuedLandslidePositions;
+    private final Map<BlockPos, Long> lastQueuedLandslideTick;
     private final List<Collapse> collapsesInProgress;
+    private long tickCounter;
 
     public WorldTracker(Level level)
     {
@@ -56,12 +63,29 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
         this.random = new Random();
         this.capability = LazyOptional.of(() -> this);
         this.landslideTicks = new BufferedList<>();
+        this.queuedLandslidePositions = new HashSet<>();
+        this.lastQueuedLandslideTick = new HashMap<>();
         this.collapsesInProgress = new ArrayList<>();
+        this.tickCounter = 0;
     }
 
     public void addLandslidePos(BlockPos pos)
     {
-        landslideTicks.add(new TickEntry(pos, 2));
+        final BlockPos immutablePos = pos.immutable();
+        if (queuedLandslidePositions.contains(immutablePos) || queuedLandslidePositions.size() >= MAX_QUEUED_LANDSLIDES)
+        {
+            return;
+        }
+
+        final Long lastQueuedTick = lastQueuedLandslideTick.get(immutablePos);
+        if (lastQueuedTick != null && tickCounter - lastQueuedTick < LANDSLIDE_REQUEUE_COOLDOWN_TICKS)
+        {
+            return;
+        }
+
+        queuedLandslidePositions.add(immutablePos);
+        lastQueuedLandslideTick.put(immutablePos, tickCounter);
+        landslideTicks.add(new TickEntry(immutablePos, 2));
     }
 
     public void addCollapseData(Collapse collapse)
@@ -93,6 +117,8 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
      */
     public void tick()
     {
+        tickCounter++;
+
         int remainingCollapseBudget = MAX_COLLAPSE_POSITIONS_PER_TICK;
         if (!collapsesInProgress.isEmpty() && random.nextInt(10) == 0)
         {
@@ -154,9 +180,16 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
             {
                 final BlockState currentState = level.getBlockState(entry.getPos());
                 LandslideRecipe.tryLandslide(level, entry.getPos(), currentState);
+                queuedLandslidePositions.remove(entry.getPos());
                 tickIterator.remove();
                 processedLandslides++;
             }
+        }
+
+        if (!lastQueuedLandslideTick.isEmpty())
+        {
+            final long cleanupBeforeTick = tickCounter - LANDSLIDE_REQUEUE_COOLDOWN_TICKS;
+            lastQueuedLandslideTick.entrySet().removeIf(entry -> !queuedLandslidePositions.contains(entry.getKey()) && entry.getValue() <= cleanupBeforeTick);
         }
     }
 
@@ -189,12 +222,24 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
         if (nbt != null)
         {
             landslideTicks.clear();
+            queuedLandslidePositions.clear();
+            lastQueuedLandslideTick.clear();
             collapsesInProgress.clear();
+            tickCounter = 0;
 
             ListTag landslideNbt = nbt.getList("landslideTicks", Tag.TAG_COMPOUND);
             for (int i = 0; i < landslideNbt.size(); i++)
             {
-                landslideTicks.add(new TickEntry(landslideNbt.getCompound(i)));
+                TickEntry tickEntry = new TickEntry(landslideNbt.getCompound(i));
+                BlockPos pos = tickEntry.getPos().immutable();
+                if (queuedLandslidePositions.size() >= MAX_QUEUED_LANDSLIDES || queuedLandslidePositions.contains(pos))
+                {
+                    continue;
+                }
+
+                queuedLandslidePositions.add(pos);
+                lastQueuedLandslideTick.put(pos, tickCounter);
+                landslideTicks.add(new TickEntry(pos, tickEntry.getTicks()));
             }
 
             ListTag collapseNbt = nbt.getList("collapsesInProgress", Tag.TAG_COMPOUND);
