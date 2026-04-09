@@ -1,12 +1,6 @@
 {
   "replace": false,
   "values": [
-    "minecollapsesolarcore:hardened_stone",
-    "minecollapsesolarcore:hardened_granite",
-    "minecollapsesolarcore:hardened_diorite",
-    "minecollapsesolarcore:hardened_andesite",
-    "minecollapsesolarcore:hardened_tuff",
-    "minecollapsesolarcore:hardened_deepslate",
     "minecraft:stone",
     "minecraft:andesite",
     "minecraft:granite",

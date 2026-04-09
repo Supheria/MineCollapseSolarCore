@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import com.supheria.minecollapsesolarcore.Config;
 import com.supheria.minecollapsesolarcore.MineCollapseSolarCore;
 import com.supheria.minecollapsesolarcore.api.CollapseUpdateSource;
+import com.supheria.minecollapsesolarcore.api.CollapseSchedulingAccess;
 import com.supheria.minecollapsesolarcore.entities.MineCollapseSolarCoreFallingBlockEntity;
 import com.supheria.minecollapsesolarcore.util.FluidHelpers;
 import com.supheria.minecollapsesolarcore.util.Helpers;
@@ -76,8 +77,17 @@ public class LandslideRecipe extends SimpleBlockRecipe
                         }
                     }
                     level.playSound(null, pos, MineCollapseSolarCore.SOUND_DIRT_SLIDE_SHORT.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
-                    level.addFreshEntity(new MineCollapseSolarCoreFallingBlockEntity(level, fallPos.getX() + 0.5, fallPos.getY(), fallPos.getZ() + 0.5, fallingState, 0.8f, 10)
-                            .setExpectBlockPresentOnFirstTick(false));
+                    if (source != null && source.isSolarDriven() && !fallPos.equals(pos) && !isWithinPlayerChainRange(level, pos)) {
+                        CollapseSchedulingAccess.pushActiveSource(CollapseUpdateSource.FALLING_BLOCK_SETTLE.name());
+                        try {
+                            level.setBlockAndUpdate(fallPos, fallingState);
+                        } finally {
+                            CollapseSchedulingAccess.popActiveSource();
+                        }
+                    } else {
+                        level.addFreshEntity(new MineCollapseSolarCoreFallingBlockEntity(level, fallPos.getX() + 0.5, fallPos.getY(), fallPos.getZ() + 0.5, fallingState, 0.8f, 10)
+                                .setExpectBlockPresentOnFirstTick(false));
+                    }
                     if (source == CollapseUpdateSource.PLAYER_ACTION && isWithinPlayerChainRange(level, pos)) {
                         WorldTracker.get(level).scheduleDirectLandslideRetry(pos.above(), source);
                     }

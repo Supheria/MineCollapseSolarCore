@@ -9,5 +9,7 @@ public interface CollapseSchedulingApi {
     void markLandslideRegionDirty(Level level, BlockPos pos, CollapseUpdateSource source);
 
     void scheduleImmediateCollapseCheck(Level level, BlockPos pos, CollapseUpdateSource source);
+
+    boolean tryImmediatePlayerBreakResponse(Level level, BlockPos pos, CollapseUpdateSource source);
 }
 

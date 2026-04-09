@@ -140,7 +140,7 @@ public class CollapseRecipe extends SimpleBlockRecipe
         final int radiusSquared = radius * radius;
         final List<BlockPos> secondaryPositions = new ArrayList<>();
 
-        MineCollapseSolarCore.LOGGER.info("Collapse started at pos {}, with the block column {} -> (start: {}) -> {}",
+        MineCollapseSolarCore.LOGGER.debug("Collapse started at pos {}, with the block column {} -> (start: {}) -> {}",
             centerPos,
             level.getBlockState(centerPos.above()),
             level.getBlockState(centerPos),

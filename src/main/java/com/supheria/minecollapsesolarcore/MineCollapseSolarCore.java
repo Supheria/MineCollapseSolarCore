@@ -15,12 +15,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -31,14 +29,9 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -66,7 +59,6 @@ import com.supheria.minecollapsesolarcore.blocks.FluidProperty;
 import com.supheria.minecollapsesolarcore.blocks.HorizontalSupportBlock;
 import com.supheria.minecollapsesolarcore.blocks.VerticalSupportBlock;
 import com.supheria.minecollapsesolarcore.entities.MineCollapseSolarCoreFallingBlockEntity;
-import com.supheria.minecollapsesolarcore.features.ErosionFeature;
 import com.supheria.minecollapsesolarcore.network.PacketHandler;
 import com.supheria.minecollapsesolarcore.recipes.CollapseRecipe;
 import com.supheria.minecollapsesolarcore.recipes.LandslideRecipe;
@@ -80,45 +72,16 @@ import com.supheria.minecollapsesolarcore.util.WorldTrackerCapability;
 @Mod(MineCollapseSolarCore.MODID)
 public class MineCollapseSolarCore
 {
-    private static final double PLAYER_CHAIN_RANGE = 10.0D;
-    private static final double PLAYER_CHAIN_RANGE_SQR = PLAYER_CHAIN_RANGE * PLAYER_CHAIN_RANGE;
-
     public static final String MODID = "minecollapsesolarcore";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, MODID);
-    public static final RegistryObject<Block> BLOCK_HARDENED_STONE = BLOCKS.register("hardened_stone",
-            () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).requiresCorrectToolForDrops().strength(1.5F, 6.0F)));
-    public static final RegistryObject<Block> BLOCK_HARDENED_GRANITE = BLOCKS.register("hardened_granite",
-            () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.DIRT).requiresCorrectToolForDrops().strength(1.5F, 6.0F)));
-    public static final RegistryObject<Block> BLOCK_HARDENED_DIORITE = BLOCKS.register("hardened_diorite",
-            () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.QUARTZ).requiresCorrectToolForDrops().strength(1.5F, 6.0F)));
-    public static final RegistryObject<Block> BLOCK_HARDENED_ANDESITE = BLOCKS.register("hardened_andesite",
-            () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).requiresCorrectToolForDrops().strength(1.5F, 6.0F)));
-    public static final RegistryObject<Block> BLOCK_HARDENED_TUFF = BLOCKS.register("hardened_tuff",
-            () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GRAY).sound(SoundType.TUFF).requiresCorrectToolForDrops().strength(1.5F, 6.0F)));
-    public static final RegistryObject<Block> BLOCK_HARDENED_DEEPSLATE = BLOCKS.register("hardened_deepslate",
-            () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.DEEPSLATE).sound(SoundType.DEEPSLATE).requiresCorrectToolForDrops().strength(3.0F, 6.0F)));
-
     public static final RegistryObject<Block> BLOCK_VERTICAL_SUPPORT = BLOCKS.register("vertical_support",
-            () -> new VerticalSupportBlock(ExtendedProperties.of().mapColor(MapColor.WOOD).sound(SoundType.WOOD).strength(1.0F).noOcclusion().flammableLikeLogs()));
+            () -> new VerticalSupportBlock(ExtendedProperties.of().sound(SoundType.WOOD).strength(1.0F).noOcclusion().flammableLikeLogs()));
     public static final RegistryObject<Block> BLOCK_HORIZONTAL_SUPPORT = BLOCKS.register("horizontal_support",
-            () -> new HorizontalSupportBlock(ExtendedProperties.of().mapColor(MapColor.WOOD).sound(SoundType.WOOD).strength(1.0F).noOcclusion().flammableLikeLogs()));
+            () -> new HorizontalSupportBlock(ExtendedProperties.of().sound(SoundType.WOOD).strength(1.0F).noOcclusion().flammableLikeLogs()));
 
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, MODID);
-    public static final RegistryObject<Item> ITEM_HARDENED_STONE = ITEMS.register("hardened_stone",
-            () -> new BlockItem(BLOCK_HARDENED_STONE.get(), new Item.Properties()));
-    public static final RegistryObject<Item> ITEM_HARDENED_GRANITE = ITEMS.register("hardened_granite",
-            () -> new BlockItem(BLOCK_HARDENED_GRANITE.get(), new Item.Properties()));
-    public static final RegistryObject<Item> ITEM_HARDENED_DIORITE = ITEMS.register("hardened_diorite",
-            () -> new BlockItem(BLOCK_HARDENED_DIORITE.get(), new Item.Properties()));
-    public static final RegistryObject<Item> ITEM_HARDENED_ANDESITE = ITEMS.register("hardened_andesite",
-            () -> new BlockItem(BLOCK_HARDENED_ANDESITE.get(), new Item.Properties()));
-    public static final RegistryObject<Item> ITEM_HARDENED_TUFF = ITEMS.register("hardened_tuff",
-            () -> new BlockItem(BLOCK_HARDENED_TUFF.get(), new Item.Properties()));
-    public static final RegistryObject<Item> ITEM_HARDENED_DEEPSLATE = ITEMS.register("hardened_deepslate",
-            () -> new BlockItem(BLOCK_HARDENED_DEEPSLATE.get(), new Item.Properties()));
-
     public static final RegistryObject<Item> ITEM_SUPPORT = ITEMS.register("support",
             () -> new StandingAndWallBlockItem(BLOCK_VERTICAL_SUPPORT.get(), BLOCK_HORIZONTAL_SUPPORT.get(), new Item.Properties(), Direction.DOWN));
 
@@ -129,20 +92,11 @@ public class MineCollapseSolarCore
             .icon(() -> ITEM_SUPPORT.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
                 output.accept(ITEM_SUPPORT.get());
-                output.accept(ITEM_HARDENED_STONE.get());
-                output.accept(ITEM_HARDENED_GRANITE.get());
-                output.accept(ITEM_HARDENED_DIORITE.get());
-                output.accept(ITEM_HARDENED_ANDESITE.get());
-                output.accept(ITEM_HARDENED_TUFF.get());
-                output.accept(ITEM_HARDENED_DEEPSLATE.get());
             }).build());
 
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     public static final RegistryObject<EntityType<MineCollapseSolarCoreFallingBlockEntity>> ENTITY_FALLING_BLOCK = ENTITIES.register("falling_block",
             () -> EntityType.Builder.<MineCollapseSolarCoreFallingBlockEntity>of(MineCollapseSolarCoreFallingBlockEntity::new, MobCategory.MISC).sized(0.98f, 0.98f).build("falling_block"));
-
-    public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(Registries.FEATURE, MODID);
-    public static final RegistryObject<ErosionFeature> FEATURE_EROSION = FEATURES.register("erosion", () -> new ErosionFeature(NoneFeatureConfiguration.CODEC));
 
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final RegistryObject<SoundEvent> SOUND_ROCK_SLIDE_LONG = SOUNDS.register("random.rock_slide_long", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "random.rock_slide_long")));
@@ -194,7 +148,6 @@ public class MineCollapseSolarCore
         ITEMS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         ENTITIES.register(modEventBus);
-        FEATURES.register(modEventBus);
         SOUNDS.register(modEventBus);
         RECIPE_TYPES.register(modEventBus);
         RECIPE_SERIALIZERS.register(modEventBus);
@@ -232,6 +185,23 @@ public class MineCollapseSolarCore
             {
                 WorldTracker.get(level).scheduleImmediateCollapseCheck(pos, source);
             }
+
+            @Override
+            public boolean tryImmediatePlayerBreakResponse(Level level, BlockPos pos, CollapseUpdateSource source)
+            {
+                final BlockState state = level.getBlockState(pos);
+                if (state.isAir() || Support.isSupported(level, pos))
+                {
+                    return false;
+                }
+
+                if (Helpers.isBlock(state, TAG_CAN_LANDSLIDE))
+                {
+                    return LandslideRecipe.tryLandslide(level, pos, state, source);
+                }
+
+                return false;
+            }
         });
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC);
@@ -251,14 +221,26 @@ public class MineCollapseSolarCore
 
         if (levelAccess instanceof Level level)
         {
-            scheduleImmediateLandslideNeighbors(level, pos);
-            scheduleDirectLandslideRetryNeighbors(level, pos, event.getPlayer());
+            scheduleImmediatePlayerBreakNeighbors(level, pos);
         }
 
         if (Helpers.isBlock(state, TAG_CAN_TRIGGER_COLLAPSE) && levelAccess instanceof Level level)
         {
             CollapseRecipe.tryTriggerCollapse(level, pos);
             return;
+        }
+    }
+
+    private void scheduleImmediatePlayerBreakNeighbors(Level level, BlockPos origin)
+    {
+        for (Direction direction : Direction.values())
+        {
+            BlockPos candidatePos = origin.relative(direction);
+            BlockState candidateState = level.getBlockState(candidatePos);
+            if (Helpers.isBlock(candidateState, TAG_CAN_LANDSLIDE))
+            {
+                WorldTracker.get(level).scheduleImmediateLandslide(candidatePos, CollapseUpdateSource.PLAYER_ACTION);
+            }
         }
     }
 
@@ -278,6 +260,7 @@ public class MineCollapseSolarCore
                 }
                 else if (source.isSolarDriven())
                 {
+                    // Solar-driven terrain churn already touches many blocks; only queue the changed position itself.
                     WorldTracker.get(world).markLandslideRegionDirty(pos, source);
                 }
                 else
@@ -307,7 +290,8 @@ public class MineCollapseSolarCore
                     }
                     else if (source.isSolarDriven())
                     {
-                        WorldTracker.get(level).markLandslideRegionDirty(pos, source);
+                        // Solar updates already enqueue the placed block itself; skipping neighbor fan-out prevents section rescans.
+                        continue;
                     }
                     else
                     {
@@ -333,62 +317,6 @@ public class MineCollapseSolarCore
         {
             WorldTracker.get(level).tick();
         }
-    }
-
-    private void scheduleImmediateLandslideNeighbors(Level level, BlockPos origin)
-    {
-        for (Direction direction : Direction.values())
-        {
-            BlockPos candidatePos = origin.relative(direction);
-            BlockState candidateState = level.getBlockState(candidatePos);
-            if (Helpers.isBlock(candidateState, TAG_CAN_LANDSLIDE))
-            {
-                WorldTracker.get(level).scheduleImmediateLandslide(candidatePos, CollapseUpdateSource.PLAYER_ACTION);
-            }
-        }
-    }
-
-    private void scheduleDirectLandslideRetryNeighbors(Level level, BlockPos origin, Player player)
-    {
-        for (Direction direction : Direction.values())
-        {
-            BlockPos candidatePos = origin.relative(direction);
-            BlockState candidateState = level.getBlockState(candidatePos);
-            if (!Helpers.isBlock(candidateState, TAG_CAN_LANDSLIDE))
-            {
-                continue;
-            }
-
-            WorldTracker.get(level).scheduleDirectLandslideRetry(candidatePos, CollapseUpdateSource.PLAYER_ACTION);
-            schedulePlayerColumnRetries(level, candidatePos, player);
-        }
-    }
-
-    private void schedulePlayerColumnRetries(Level level, BlockPos startPos, Player player)
-    {
-        if (player == null) {
-            return;
-        }
-
-        BlockPos currentPos = startPos.above();
-        while (isWithinPlayerChainRange(player, currentPos))
-        {
-            BlockState currentState = level.getBlockState(currentPos);
-            if (!Helpers.isBlock(currentState, TAG_CAN_LANDSLIDE))
-            {
-                break;
-            }
-            WorldTracker.get(level).scheduleDirectLandslideRetry(currentPos, CollapseUpdateSource.PLAYER_ACTION);
-            currentPos = currentPos.above();
-        }
-    }
-
-    private static boolean isWithinPlayerChainRange(Player player, BlockPos pos)
-    {
-        double dx = player.getX() - (pos.getX() + 0.5D);
-        double dy = player.getY() - (pos.getY() + 0.5D);
-        double dz = player.getZ() - (pos.getZ() + 0.5D);
-        return dx * dx + dy * dy + dz * dz <= PLAYER_CHAIN_RANGE_SQR;
     }
 
     private void onDataPackSync(OnDatapackSyncEvent event)

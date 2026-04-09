@@ -1,0 +1,11 @@
+{
+  "subtitles.generic.minecollapsesolarcore.dirt_slide": "土层滑塌",
+  "subtitles.generic.minecollapsesolarcore.rock_slide_long": "岩层坍塌",
+  "subtitles.generic.minecollapsesolarcore.rock_slide_long_fake": "岩层异响",
+  "subtitles.generic.minecollapsesolarcore.rock_slide_short": "碎石滚落",
+  "itemGroup.minecollapsesolarcore": "塌方",
+  "block.minecollapsesolarcore.vertical_support": "支撑",
+  "block.minecollapsesolarcore.horizontal_support": "支撑",
+  "item.minecollapsesolarcore.support": "支撑",
+  "entity.minecollapsesolarcore.falling_block": "坠落方块"
+}

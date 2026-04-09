@@ -31,6 +31,10 @@ public class HorizontalSupportBlock extends VerticalSupportBlock
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack)
     {
+        if (level.isClientSide()) {
+            return;
+        }
+
         final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         Direction direction = null;
         for (Direction checkDir : Direction.Plane.HORIZONTAL)
@@ -48,20 +52,24 @@ public class HorizontalSupportBlock extends VerticalSupportBlock
         }
 
         final int distance = getHorizontalDistance(direction, level, pos);
-        if (distance == 0 || stack.getCount() < distance)
+        int extraSupportsNeeded = Math.max(0, distance - 1);
+        if (distance == 0 || stack.getCount() - 1 < extraSupportsNeeded)
         {
             level.destroyBlock(pos, true);
         }
         else if (distance > 0)
         {
-            stack.shrink(distance - 1); // first one will be used by BlockItem
+            stack.shrink(extraSupportsNeeded);
             for (int i = 1; i < distance; i++)
             {
                 mutablePos.set(pos).move(direction, i);
                 final BlockState stateAt = level.getBlockState(mutablePos);
                 if (isEmptyOrValidFluid(stateAt))
                 {
-                    level.setBlock(mutablePos, defaultBlockState().setValue(PROPERTY_BY_DIRECTION.get(direction), true).setValue(PROPERTY_BY_DIRECTION.get(direction.getOpposite()), true).setValue(getFluidProperty(), getFluidProperty().keyForOrEmpty(stateAt.getFluidState().getType())), 2);
+                    BlockState placedState = getAutoPlacedState(level, mutablePos, stateAt.getFluidState().getType())
+                            .setValue(PROPERTY_BY_DIRECTION.get(direction), true)
+                            .setValue(PROPERTY_BY_DIRECTION.get(direction.getOpposite()), true);
+                    level.setBlock(mutablePos, placedState, 3);
                     mutablePos.move(Direction.DOWN);
                     level.scheduleTick(mutablePos, level.getFluidState(mutablePos).getType(), 3);
                 }

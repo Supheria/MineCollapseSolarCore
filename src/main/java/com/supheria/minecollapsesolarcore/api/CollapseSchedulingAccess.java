@@ -55,6 +55,10 @@ public final class CollapseSchedulingAccess {
         }
     }
 
+    public static boolean tryImmediatePlayerBreakResponse(Level level, BlockPos pos, String sourceName) {
+        return api != null && api.tryImmediatePlayerBreakResponse(level, pos, CollapseUpdateSource.fromName(sourceName));
+    }
+
     private CollapseSchedulingAccess() {}
 }
 

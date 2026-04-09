@@ -71,26 +71,23 @@ public class VerticalSupportBlock extends Block implements IForgeBlockExtension,
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack)
     {
         if (level.isClientSide() || placer == null) return;
-        if (stack.getCount() > 2 && !placer.isShiftKeyDown()) // need two because the item block hasn't shrunk the stack yet
-        {
-            final BlockPos above = pos.above(), above2 = above.above();
-            final BlockState stateAbove = level.getBlockState(above), stateAbove2 = level.getBlockState(above2);
-            final Fluid fluidAbove = stateAbove.getFluidState().getType(), fluidAbove2 = stateAbove2.getFluidState().getType();
-            if (isEmptyOrValidFluid(stateAbove) && isEmptyOrValidFluid(stateAbove2))
-            {
-                if (level.getEntities(null, new AABB(above)).isEmpty())
-                {
-                    level.setBlock(above, defaultBlockState().setValue(getFluidProperty(), getFluidProperty().keyForOrEmpty(fluidAbove)), 2);
-                    if (level.getEntities(null, new AABB(above2)).isEmpty())
-                    {
-                        level.setBlock(above2, defaultBlockState().setValue(getFluidProperty(), getFluidProperty().keyForOrEmpty(fluidAbove2)), 2);
-                        stack.shrink(2);
-                    }
-                    else
-                    {
-                        stack.shrink(1);
-                    }
-                }
+        if (placer.isShiftKeyDown() || stack.isEmpty()) {
+            return;
+        }
+
+        int extraSupports = Math.min(2, Math.max(0, stack.getCount() - 1));
+        for (int offset = 1; offset <= extraSupports; offset++) {
+            BlockPos targetPos = pos.above(offset);
+            BlockState targetState = level.getBlockState(targetPos);
+            Fluid targetFluid = targetState.getFluidState().getType();
+            if (!isEmptyOrValidFluid(targetState) || !level.getEntities(null, new AABB(targetPos)).isEmpty()) {
+                break;
+            }
+
+            level.setBlock(targetPos, getAutoPlacedState(level, targetPos, targetFluid), 3);
+            stack.shrink(1);
+            if (stack.isEmpty()) {
+                break;
             }
         }
     }
@@ -177,6 +174,19 @@ public class VerticalSupportBlock extends Block implements IForgeBlockExtension,
     protected boolean isEmptyOrValidFluid(BlockState state)
     {
         return FluidHelpers.isAirOrEmptyFluid(state) && getFluidProperty().canContain(state.getFluidState().getType());
+    }
+
+    protected BlockState getAutoPlacedState(Level level, BlockPos pos, Fluid fluid)
+    {
+        BlockState placedState = defaultBlockState().setValue(getFluidProperty(), getFluidProperty().keyForOrEmpty(fluid));
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        for (Direction direction : Direction.Plane.HORIZONTAL)
+        {
+            mutablePos.setWithOffset(pos, direction);
+            placedState = placedState.setValue(PROPERTY_BY_DIRECTION.get(direction),
+                    Helpers.isBlock(level.getBlockState(mutablePos), MineCollapseSolarCore.TAG_SUPPORT_BEAMS));
+        }
+        return placedState;
     }
 }
 
