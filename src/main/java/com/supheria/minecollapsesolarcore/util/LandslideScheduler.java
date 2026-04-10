@@ -110,12 +110,13 @@ public final class LandslideScheduler {
     public void tick() {
         tickCounter++;
 
-        processDirectRetries();
+        int remainingBudget = CollapseBudgetProfile.immediateLandslideBudget(level);
+        remainingBudget -= processDirectRetries(remainingBudget);
 
         immediateTicks.flush();
         Iterator<TickEntry> iterator = immediateTicks.listIterator();
         int processed = 0;
-        while (iterator.hasNext() && processed < CollapseBudgetProfile.immediateLandslideBudget(level)) {
+        while (iterator.hasNext() && processed < remainingBudget) {
             TickEntry entry = iterator.next();
             if (!entry.tick()) {
                 continue;
@@ -141,12 +142,12 @@ public final class LandslideScheduler {
         }
     }
 
-    private void processDirectRetries() {
+    private int processDirectRetries(int budget) {
         if (directRetryPositions.isEmpty()) {
-            return;
+            return 0;
         }
 
-        int remaining = CollapseBudgetProfile.immediateLandslideBudget(level);
+        int remaining = Math.max(0, budget);
         List<Map.Entry<BlockPos, CollapseUpdateSource>> batch = new ArrayList<>(Math.min(directRetryPositions.size(), remaining));
         Iterator<Map.Entry<BlockPos, CollapseUpdateSource>> iterator = directRetryPositions.entrySet().iterator();
         while (iterator.hasNext() && remaining > 0) {
@@ -163,6 +164,7 @@ public final class LandslideScheduler {
                 LandslideRecipe.tryLandslide(level, pos, state, entry.getValue());
             }
         }
+        return batch.size();
     }
 }
 
