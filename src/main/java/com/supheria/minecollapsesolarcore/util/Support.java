@@ -77,7 +77,7 @@ public final class Support
         {
             final BlockState supportState = world.getBlockState(supportPos);
             final Support support = get(supportState);
-            if (support != null && support.canSupport(supportPos, pos))
+            if (support != null && support.canSupport(world, supportPos, pos))
             {
                 return true;
             }
@@ -170,10 +170,33 @@ public final class Support
         return ingredient.test(state);
     }
 
-    public boolean canSupport(BlockPos supportPos, BlockPos testPos)
+    public boolean canSupport(BlockGetter world, BlockPos supportPos, BlockPos testPos)
     {
         BlockPos diff = supportPos.subtract(testPos);
-        return Math.abs(diff.getX()) <= supportHorizontal && -supportDown <= diff.getY() && diff.getY() <= supportUp && Math.abs(diff.getZ()) <= supportHorizontal;
+        return Math.abs(diff.getX()) <= supportHorizontal
+                && -supportDown <= diff.getY()
+                && diff.getY() <= supportUp
+                && Math.abs(diff.getZ()) <= supportHorizontal
+                && hasContinuousVerticalLoadPath(world, supportPos, testPos);
+    }
+
+    private boolean hasContinuousVerticalLoadPath(BlockGetter world, BlockPos supportPos, BlockPos testPos)
+    {
+        if (testPos.getY() <= supportPos.getY() + 1)
+        {
+            return true;
+        }
+
+        BlockPos.MutableBlockPos cursor = testPos.mutable().move(0, -1, 0);
+        while (cursor.getY() > supportPos.getY())
+        {
+            if (FluidHelpers.isAirOrEmptyFluid(world.getBlockState(cursor)))
+            {
+                return false;
+            }
+            cursor.move(0, -1, 0);
+        }
+        return true;
     }
 
     public Iterable<BlockPos> getSupportedArea(BlockPos center)

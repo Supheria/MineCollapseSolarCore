@@ -116,7 +116,8 @@ public class CollapseRecipe extends SimpleBlockRecipe
         final BlockPos posBelow = pos.below();
         final BlockState state = level.getBlockState(pos);
         final BlockState stateBelow = level.getBlockState(posBelow);
-        return Helpers.isBlock(state, MineCollapseSolarCore.TAG_CAN_START_COLLAPSE)
+        return !Support.isSupported(level, pos)
+            && Helpers.isBlock(state, MineCollapseSolarCore.TAG_CAN_START_COLLAPSE)
             // If we can directly fall into this block (same as a single block collapse check), we can start a collapse
             && (MineCollapseSolarCoreFallingBlockEntity.canFallThrough(level, posBelow, stateBelow, Direction.DOWN, state)
             // Or, if the block directly below isn't quite a solid block - stuff like upwards facing slabs n stairs can still cause collapses to start, since we can forcibly break them
@@ -154,7 +155,7 @@ public class CollapseRecipe extends SimpleBlockRecipe
             {
                 BlockPos posAt = pos.above(y);
                 BlockState stateAt = level.getBlockState(posAt);
-                if (foundEmpty && Helpers.isBlock(stateAt, MineCollapseSolarCore.TAG_CAN_COLLAPSE))
+                if (foundEmpty && !Support.isSupported(level, posAt) && Helpers.isBlock(stateAt, MineCollapseSolarCore.TAG_CAN_COLLAPSE))
                 {
                     // Check for a possible collapse
                     if (posAt.distSqr(centerPos) < radiusSquared && random.nextFloat() < Config.COLLAPSE_PROPAGATE_CHANCE.get())
@@ -192,6 +193,11 @@ public class CollapseRecipe extends SimpleBlockRecipe
 
     public static boolean collapseBlock(Level level, BlockPos pos, BlockState state, boolean destroyBlockBelow)
     {
+        if (Support.isSupported(level, pos))
+        {
+            return false;
+        }
+
         final BlockInventory wrapper = new BlockInventory(pos, state);
         final CollapseRecipe recipe = getRecipe(level, wrapper);
         if (recipe != null)

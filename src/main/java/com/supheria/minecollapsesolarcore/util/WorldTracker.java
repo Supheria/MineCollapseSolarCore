@@ -136,7 +136,11 @@ public class WorldTracker implements ICapabilitySerializable<CompoundTag>
                     processed++;
                     // Check the current position for collapsing
                     final BlockState stateAt = level.getBlockState(posAt);
-                    if (Helpers.isBlock(stateAt, MineCollapseSolarCore.TAG_CAN_COLLAPSE) && MineCollapseSolarCoreFallingBlockEntity.canFallInDirection(level, posAt, Direction.DOWN) && posAt.distSqr(collapse.centerPos) < collapse.radiusSquared && random.nextFloat() < Config.COLLAPSE_PROPAGATE_CHANCE.get())
+                    if (!Support.isSupported(level, posAt)
+                        && Helpers.isBlock(stateAt, MineCollapseSolarCore.TAG_CAN_COLLAPSE)
+                        && MineCollapseSolarCoreFallingBlockEntity.canFallInDirection(level, posAt, Direction.DOWN)
+                        && posAt.distSqr(collapse.centerPos) < collapse.radiusSquared
+                        && random.nextFloat() < Config.COLLAPSE_PROPAGATE_CHANCE.get())
                     {
                         if (CollapseRecipe.collapseBlock(level, posAt, stateAt))
                         {

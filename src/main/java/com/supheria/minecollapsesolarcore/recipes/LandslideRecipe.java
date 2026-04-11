@@ -1,8 +1,5 @@
 package com.supheria.minecollapsesolarcore.recipes;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -20,14 +17,14 @@ import com.supheria.minecollapsesolarcore.api.CollapseUpdateSource;
 import com.supheria.minecollapsesolarcore.api.CollapseSchedulingAccess;
 import com.supheria.minecollapsesolarcore.entities.MineCollapseSolarCoreFallingBlockEntity;
 import com.supheria.minecollapsesolarcore.util.FluidHelpers;
-import com.supheria.minecollapsesolarcore.util.Helpers;
 import com.supheria.minecollapsesolarcore.util.IndirectHashCollection;
 import com.supheria.minecollapsesolarcore.util.Support;
 import com.supheria.minecollapsesolarcore.util.WorldTracker;
 
 /**
- * This handles all logic for land slides (sideways gravity affected blocks)
- * The recipe only handles landslide *transformations*, not if a block is affected by landslides. That is determined by tag.
+ * This handles gravity-triggered movement for unstable side-fall blocks.
+ *
+ * <p>Solar fork behavior keeps only vertical falling. Sideways landslides are intentionally disabled.</p>
  *
  * @see MineCollapseSolarCoreFallingBlockEntity
  */
@@ -69,25 +66,9 @@ public class LandslideRecipe extends SimpleBlockRecipe
                 {
                     final BlockState fallingState = recipe.getBlockCraftingResult(state);
                     level.removeBlock(pos, false);
-                    if (!fallPos.equals(pos))
-                    {
-                        if (!FluidHelpers.isAirOrEmptyFluid(level.getBlockState(fallPos)))
-                        {
-                            level.destroyBlock(fallPos, true); // Destroy the block that currently occupies the pos we are going to move sideways into
-                        }
-                    }
                     level.playSound(null, pos, MineCollapseSolarCore.SOUND_DIRT_SLIDE_SHORT.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
-                    if (source != null && source.isSolarDriven() && !fallPos.equals(pos) && !isWithinPlayerChainRange(level, pos)) {
-                        CollapseSchedulingAccess.pushActiveSource(CollapseUpdateSource.FALLING_BLOCK_SETTLE.name());
-                        try {
-                            level.setBlockAndUpdate(fallPos, fallingState);
-                        } finally {
-                            CollapseSchedulingAccess.popActiveSource();
-                        }
-                    } else {
-                        level.addFreshEntity(new MineCollapseSolarCoreFallingBlockEntity(level, fallPos.getX() + 0.5, fallPos.getY(), fallPos.getZ() + 0.5, fallingState, 0.8f, 10)
-                                .setExpectBlockPresentOnFirstTick(false));
-                    }
+                    level.addFreshEntity(new MineCollapseSolarCoreFallingBlockEntity(level, fallPos.getX() + 0.5, fallPos.getY(), fallPos.getZ() + 0.5, fallingState, 0.8f, 10)
+                            .setExpectBlockPresentOnFirstTick(false));
                     if (source == CollapseUpdateSource.PLAYER_ACTION && isWithinPlayerChainRange(level, pos)) {
                         WorldTracker.get(level).scheduleDirectLandslideRetry(pos.above(), source);
                     }
@@ -108,50 +89,7 @@ public class LandslideRecipe extends SimpleBlockRecipe
         {
             return pos;
         }
-        else
-        {
-            // Check if supported by at least two horizontals, or one on top
-            if (!isSupportedOnSide(level, pos, Direction.UP))
-            {
-                int supportedDirections = 0;
-                List<BlockPos> possibleDirections = new ArrayList<>();
-                for (Direction side : Direction.Plane.HORIZONTAL)
-                {
-                    if (isSupportedOnSide(level, pos, side))
-                    {
-                        supportedDirections++;
-                        if (supportedDirections >= 2)
-                        {
-                            // Supported by at least two sides, don't fall
-                            return null;
-                        }
-                    }
-                    else
-                    {
-                        // In order to fall in a direction, we need both the block immediately next to, and the one below to be open
-                        // The one adjacent needs to be breakable, wheras the one below just needs to be unstable
-                        final BlockPos posSide = pos.relative(side), posSideBelow = posSide.below();
-                        if (MineCollapseSolarCoreFallingBlockEntity.canFallThrough(level, posSide, side, fallingState) && MineCollapseSolarCoreFallingBlockEntity.canFallThrough(level, posSideBelow, Direction.DOWN))
-                        {
-                            possibleDirections.add(posSide);
-                        }
-                    }
-                }
-
-                if (!possibleDirections.isEmpty())
-                {
-                    return possibleDirections.get(level.getRandom().nextInt(possibleDirections.size()));
-                }
-            }
-        }
         return null;
-    }
-
-    public static boolean isSupportedOnSide(BlockGetter world, BlockPos pos, Direction side)
-    {
-        BlockPos sidePos = pos.relative(side);
-        BlockState sideState = world.getBlockState(sidePos);
-        return sideState.isFaceSturdy(world, sidePos, side.getOpposite()) || Helpers.isBlock(sideState, MineCollapseSolarCore.TAG_SUPPORTS_LANDSLIDE);
     }
 
     private static boolean isWithinPlayerChainRange(Level level, BlockPos pos)
